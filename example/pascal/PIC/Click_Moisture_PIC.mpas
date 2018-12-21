@@ -1,0 +1,80 @@
+{*
+Example for Moisture Click
+
+    Date          : maj 2018.
+    Author        : Katarina Perendic
+
+Test configuration PIC :
+    
+    MCU             : P18F87K22
+    Dev. Board      : EasyPIC PRO v7
+    PIC Compiler ver : v7.2.0.0
+
+---
+
+Description :
+
+The application is composed of three sections :
+
+- System Initialization - Initializes I2C module
+- Application Initialization - Initializes Driver init and sets moisture gain, offset data and clock divider.
+                               Calibration chip for measurement - don't touch the sensor while calibrating.
+- Application Task - (code snippet) - Measure moisture data in percentage every 500ms.
+  To make the measurement successful, touch the sensor and wait until values are stabilized.
+
+*}
+program Click_Moisture_PIC;
+
+uses Click_Moisture_types, Click_Moisture_config;
+
+var
+    demoText : array[50] of char; 
+    moistureData : uint8_t; 
+    
+procedure systemInit(); 
+begin
+
+    mikrobus_gpioInit(_MIKROBUS1, _MIKROBUS_INT_PIN, _GPIO_INPUT); 
+    mikrobus_gpioInit(_MIKROBUS1, _MIKROBUS_RST_PIN, _GPIO_OUTPUT); 
+    mikrobus_i2cInit(_MIKROBUS1, @_MOISTURE_I2C_CFG[0]); 
+    mikrobus_logInit(_LOG_USBUART, 9600); 
+    mikrobus_logWrite(' --- System init --- ', _LOG_LINE); 
+    Delay_ms(100); 
+
+end;
+
+procedure applicationInit(); 
+begin
+
+    moisture_i2cDriverInit(T_MOISTURE_P(@_MIKROBUS1_GPIO), T_MOISTURE_P(@_MIKROBUS1_I2C), 0x2A); 
+    moisture_softReset(); 
+    moisture_init(_MOISTURE_OUTPUT_GAIN_x16, _MOISTURE_DEFAULT_OFFSET, _MOISTURE_CLOCK_DIVIDERS_x10); 
+    mikrobus_logWrite(' --- Calibration start --- ', _LOG_LINE); 
+    moisture_calibration(); 
+    Delay_1sec(); 
+    mikrobus_logWrite(' --- Calibration finishing --- ', _LOG_LINE); 
+
+end;
+
+procedure applicationTask(); 
+begin
+
+    mikrobus_logWrite(' Moisture data : ', _LOG_TEXT); 
+    moistureData := moisture_getData(); 
+    IntToStr(moistureData, demoText); 
+    mikrobus_logWrite(demoText, _LOG_LINE); 
+    Delay_ms(500); 
+
+end;
+
+begin
+    demoText[0] := 0;
+
+    systemInit(); 
+    applicationInit(); 
+    while (1) do 
+    begin 
+        applicationTask(); 
+    end;
+
+end.

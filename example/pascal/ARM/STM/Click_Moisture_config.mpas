@@ -1,0 +1,8 @@
+unit Click_Moisture_config;
+
+uses Click_Moisture_types;
+
+const
+    _MOISTURE_I2C_CFG : array[1] of uint32_t = (400000); 
+    
+end.
